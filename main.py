@@ -1,32 +1,19 @@
 
 import pandas as pd
 import seaborn as sns
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
 from main_interface import *
-from utilities import change_axis, change_cursor
-
-
-class CreateCanvas(FigureCanvasQTAgg):
-    def __init__(self, nrow=1, ncol=1):
-        # create Matplotlib Figure object
-        figure = Figure(dpi=100, tight_layout=True)
-        
-        # reserve width and height space for subplots
-        figure.subplots_adjust(wspace=.3, hspace=.4)
-        
-        # create the axes and set the number of rows/ columns for the subplots(s)
-        self.axes = figure.subplots(nrow, ncol)
-        super(CreateCanvas, self).__init__(figure)
+from utilities import change_cursor, UtilityManager, CreateCanvas
 
 
 class ControlCenter(MainInterface):
     def __init__(self, parent=None):
         super(ControlCenter, self).__init__(parent)
+        self.utility = UtilityManager()
         self.load_dataset_to_memory()
 
         # default values
@@ -42,23 +29,8 @@ class ControlCenter(MainInterface):
         self.previous_yaxis_index = 0
 
     def load_dataset_to_memory(self):
-        self.data = pd.read_csv("NYPD_Shooting.csv", parse_dates=[["OCCUR_DATE", "OCCUR_TIME"]])
+        self.data = self.utility.load_dataset_from_memory()
 
-        # optimizing tables and remove redundant columns
-        self.data = self.data.drop(['Lon_Lat', "X_COORD_CD", "Y_COORD_CD", "INCIDENT_KEY"], axis=1)
-
-        categorical_columns = ['BORO', 'PRECINCT', 'JURISDICTION_CODE', 'LOCATION_DESC', 'PERP_AGE_GROUP', 'PERP_SEX',
-                               'PERP_RACE', 'VIC_AGE_GROUP', 'VIC_SEX', 'VIC_RACE']
-
-        self.data[categorical_columns] = self.data[categorical_columns].astype('category')
-        self.data = self.data.set_index("OCCUR_DATE_OCCUR_TIME", drop=False)
-
-        # order the age group categories
-        self.data['PERP_AGE_GROUP'].cat.reorder_categories(['<18', '18-24', '25-44', '45-64', '65+',
-                                                            'UNKNOWN', '224', '940', '1020'],
-                                                           ordered=True, inplace=True)
-        self.data['VIC_AGE_GROUP'].cat.reorder_categories(['<18', '18-24', '25-44', '45-64', '65+',
-                                                           'UNKNOWN'], ordered=True, inplace=True)
         data_columns = ["None", *self.data.columns]
         self.yaxis_comboBox.addItems(data_columns)
         self.xaxis_comboBox.addItems(data_columns)
@@ -98,22 +70,17 @@ class ControlCenter(MainInterface):
     def change_xaxis(self):
         """Change the x-axis scale of the initial empty chart to mimic the underlying data."""
         axis_label = self.xaxis_comboBox.currentText()
-        if axis_label == 'None':
-            # set the axis_label to the default axis
-            pass
-        else:
+        if axis_label != 'None':
             values = self.data[axis_label]
-            self.axis_x = change_axis(axis_label, values)
+            self.axis_x = self.utility.change_axis(axis_label, values, axe="x")
             self.chart.setAxisX(self.axis_x)
 
     def change_yaxis(self):
         """Change the y-axis scale of the initial empty chart to mimic the underlying data."""
         axis_label = self.yaxis_comboBox.currentText()
-        if axis_label == 'None':
-            pass
-        else:
+        if axis_label != 'None':
             values = self.data[axis_label]
-            self.axis_y = change_axis(axis_label, values, axe="y")
+            self.axis_y = self.utility.change_axis(axis_label, values, axe="y")
             self.chart.setAxisY(self.axis_y)
 
     def change_qchart_theme(self):
@@ -231,10 +198,7 @@ class ControlCenter(MainInterface):
 
             # check if the data columns are categorical else raised error
             if column not in self.categorical_columns:
-                message = "This feature data are continuous values and not categorical do you" \
-                          "you still want to continue?"
-                permission = QMessageBox().information(self, "Invalid data", message,
-                                                       QMessageBox.Ok | QMessageBox.Discard)
+                permission = self.utility.display_bar_chart_warning(self)
 
                 if permission == QMessageBox.Discard:
                     self.xaxis_comboBox.setCurrentIndex(self.previous_xaxis_index)
@@ -264,18 +228,12 @@ class ControlCenter(MainInterface):
             index, values = data.index, data.values
 
             bar_canvas = CreateCanvas()
-            bar_canvas.axes.bar([f"{ind}" for ind in index], values, zorder=10)
-            bar_canvas.axes.set_xlabel(column)
-            bar_canvas.axes.set_ylabel("Count")
-            bar_canvas.axes.grid(True, axis='y')
-
-            if tick_labels:
-                bar_canvas.axes.set_xticklabels(tick_labels)
+            bar_canvas.plot_bar_chart("Vertical", index, values, axis_label=column,
+                                      grid_on=True, grid_axis="y", tick_labels=tick_labels)
 
             # rotate the angle of the label whose column who have longer names
             if column in ["LOCATION_DESC", "PERP_RACE", "VIC_RACE"]:
-                labels = bar_canvas.axes.get_xticklabels()
-                plt.setp(labels, rotation=90)
+                bar_canvas.rotate_ticks()
 
             plt.tight_layout()
             if self.tool_bar is not None:
@@ -298,10 +256,7 @@ class ControlCenter(MainInterface):
 
             # check if the data columns are categorical else raised error
             if column not in self.categorical_columns:
-                message = "This feature data are continuous values and not categorical do you" \
-                          "you still want to continue?"
-                permission = QMessageBox().information(self, "Invalid data", message,
-                                                       QMessageBox.Ok | QMessageBox.Discard)
+                permission = self.utility.display_bar_chart_warning(self)
 
                 if permission == QMessageBox.Discard:
                     self.yaxis_comboBox.setCurrentIndex(self.previous_yaxis_index)
@@ -332,13 +287,8 @@ class ControlCenter(MainInterface):
             index, values = data.index, data.values
 
             bar_canvas = CreateCanvas()
-            bar_canvas.axes.barh([f"{ind}" for ind in index], values, zorder=10)
-            bar_canvas.axes.set_ylabel(column)
-            bar_canvas.axes.set_xlabel("Count")
-            bar_canvas.axes.grid(True, axis='x')
-
-            if tick_labels:
-                bar_canvas.axes.set_yticklabels(tick_labels)
+            bar_canvas.plot_bar_chart("Horizontal", index, values, axis_label=column,
+                                      grid_on=True, grid_axis="x", tick_labels=tick_labels)
 
             if self.tool_bar is not None:
                 self.removeToolBar(self.tool_bar)
@@ -359,7 +309,8 @@ class ControlCenter(MainInterface):
         self.plot_scatter_chart()
 
     def plot_scatter_chart(self, axis=None):
-        tick_labels = None
+        x_tick_labels = False
+        y_tick_labels = False
         if self.plot_type_comboBox.currentText() == "Scatter plot":
 
             xaxis = self.xaxis_comboBox.currentText()
@@ -391,7 +342,7 @@ class ControlCenter(MainInterface):
 
                 if self.xaxis_daily_setting.isChecked():
                     if not self.shade_plot.isChecked():
-                        tick_labels = ["0", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun", "8"]
+                        x_tick_labels = True
                     x_label = "Day"
                     xaxis = list(self.data.index.isocalendar().day)
 
@@ -402,8 +353,11 @@ class ControlCenter(MainInterface):
             if yaxis.name == "OCCUR_DATE_OCCUR_TIME":
 
                 if self.yaxis_daily_setting.isChecked():
-                    yaxis = list(self.data.index.isocalendar().day)
+                    if not self.shade_plot.isChecked():
+                        y_tick_labels = True
                     y_label = "Day"
+                    yaxis = list(self.data.index.isocalendar().day)
+
                 elif self.yaxis_monthly_setting.isChecked():
                     yaxis = self.data.index.month
                     y_label = "Month"
@@ -412,18 +366,11 @@ class ControlCenter(MainInterface):
             self.set_scatter_transparency.setToolTip(f"{alpha}")
 
             scatter_canvas = CreateCanvas()
-            if self.shade_plot.isChecked():
-                if x_label == y_label:
-                    sns.histplot(x=xaxis, y=yaxis, ax=scatter_canvas.axes)
-                else:
-                    sns.kdeplot(x=xaxis, y=yaxis, fill=True, ax=scatter_canvas.axes)
-            else:
-                scatter_canvas.axes.scatter(xaxis, yaxis, alpha=alpha)
-            scatter_canvas.axes.set_xlabel(x_label)
-            scatter_canvas.axes.set_ylabel(y_label)
-
-            if tick_labels:
-                scatter_canvas.axes.set_xticklabels(tick_labels)
+            scatter_canvas.plot_scatter_chart(xaxis, yaxis, x_label=x_label, y_label=y_label,
+                                              x_tick_labels=x_tick_labels,
+                                              y_tick_labels=y_tick_labels,
+                                              fill=self.shade_plot.isChecked(),
+                                              alpha=alpha)
 
             if self.tool_bar is not None:
                 self.removeToolBar(self.tool_bar)
@@ -572,6 +519,7 @@ class ControlCenter(MainInterface):
             density_canvas = CreateCanvas()
 
             if xaxis in self.numerical_columns and yaxis in self.numerical_columns:
+                # if both axis contains valid data
                 xaxis = self.data[xaxis]
                 yaxis = self.data[yaxis]
 
@@ -608,6 +556,7 @@ class ControlCenter(MainInterface):
                 density_canvas.axes.set_ylabel(y_label)
 
             elif axis == "x" and xaxis in self.numerical_columns:
+                # if only the xaxis contains valid data
                 xaxis = self.data[xaxis]
                 x_label = xaxis.name
 

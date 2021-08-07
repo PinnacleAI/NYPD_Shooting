@@ -302,10 +302,3 @@ class MainInterface(QMainWindow):
             self.setup_mpl_theme()
         elif style_class == "QChart":
             self.setup_qchart_theme()
-
-
-if __name__ == '__main__':
-    app = QApplication([])
-    window = MainInterface()
-    window.show()
-    sys.exit(app.exec_())
