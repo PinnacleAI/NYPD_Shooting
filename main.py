@@ -3,11 +3,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
 from main_interface import *
-from utilities import change_cursor, UtilityManager, CreateCanvas
+from utilities import UtilityManager, CreateCanvas
 
 
 class ControlCenter(MainInterface):
@@ -54,6 +53,11 @@ class ControlCenter(MainInterface):
         self.yaxis_monthly_setting.clicked.connect(lambda: self.slot_manager('y'))
         self.yaxis_daily_setting.clicked.connect(lambda: self.slot_manager('y'))
 
+        self.group_by_comboBox.currentTextChanged.connect(lambda: self.slot_manager("group_by"))
+        self.group_by_daily_setting.clicked.connect(lambda: self.slot_manager("group_by"))
+        self.group_by_monthly_setting.clicked.connect(lambda: self.slot_manager("group_by"))
+        self.group_by_yearly_setting.clicked.connect(lambda: self.slot_manager("group_by"))
+
     def slot_manager(self, axis):
         if self.plot_type_comboBox.currentText() == "None":
             if axis == "x":
@@ -63,8 +67,11 @@ class ControlCenter(MainInterface):
         else:
             if axis == "x":
                 self.change_xaxis_date_setting()
-            else:
+            elif axis == "y":
                 self.change_yaxis_date_setting()
+            elif axis == "group_by":
+                self.change_group_by_date_setting()
+
             self.plot_data(axis)
 
     def change_xaxis(self):
@@ -186,6 +193,13 @@ class ControlCenter(MainInterface):
                 self.xaxis_date_settings_group.setHidden(True)
             self.yaxis_date_settings_group.setHidden(True)
 
+    def change_group_by_date_setting(self):
+        group_by = self.group_by_comboBox.currentText()
+        if group_by == "OCCUR_DATE_OCCUR_TIME":
+            self.group_by_date_settings_group.setHidden(False)
+        else:
+            self.group_by_date_settings_group.setHidden(True)
+
     def plot_vertical_bar_chart(self):
         tick_labels = None
         if self.plot_type_comboBox.currentText() == "Bar plot":
@@ -228,12 +242,53 @@ class ControlCenter(MainInterface):
             index, values = data.index, data.values
 
             bar_canvas = CreateCanvas()
-            bar_canvas.plot_bar_chart("Vertical", index, values, axis_label=column,
-                                      grid_on=True, grid_axis="y", tick_labels=tick_labels)
+            if self.group_by_comboBox.currentText() == "None":
+                bar_canvas.plot_bar_chart("Vertical", index, values, axis_label=column,
+                                          grid_on=True, grid_axis="y", tick_labels=tick_labels)
+            else:
+                hue = None
+                if self.group_by_comboBox.currentText() not in self.categorical_columns:
+                    # Warn the user
+                    message = "Grouping numerical features uses too much computer resources. Aborting..."
+                    QMessageBox().warning(self, "Invalid data", message)
+
+                    # plot the chart without grouping the data
+                    bar_canvas.plot_bar_chart("Vertical", index, values, axis_label=column,
+                                              grid_on=True, grid_axis="y", tick_labels=tick_labels)
+                elif self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
+                    if self.group_by_daily_setting.isChecked():
+                        hue = self.data.index.isocalendar().day
+                    elif self.group_by_monthly_setting.isChecked():
+                        hue = self.data.index.month
+                    elif self.group_by_yearly_setting.isChecked():
+                        hue = self.data.index.year
+
+                    # convert hue data to pd.Series having the same index with the
+                    # main data to enable plotting as hue
+                    hue = pd.Series(hue, index=self.data.index)
+                else:
+                    hue = self.group_by_comboBox.currentText()
+
+                if hue is None:
+                    bar_canvas.plot_bar_chart("Vertical", index, values, axis_label=column,
+                                              grid_on=True, grid_axis="y", tick_labels=tick_labels)
+                else:
+                    if column == "OCCUR_DATE_OCCUR_TIME":
+                        if self.xaxis_daily_setting.isChecked():
+                            column = self.data.index.isocalendar().day
+                        elif self.xaxis_monthly_setting.isChecked():
+                            column = self.data.index.month
+                        elif self.xaxis_yearly_setting.isChecked():
+                            column = self.data.index.year
+
+                        column = pd.Series(column, index=self.data.index)
+
+                    sns.countplot(x=column, hue=hue, data=self.data, ax=bar_canvas.axes)
 
             # rotate the angle of the label whose column who have longer names
-            if column in ["LOCATION_DESC", "PERP_RACE", "VIC_RACE"]:
-                bar_canvas.rotate_ticks()
+            if isinstance(column, str):
+                if column in ["LOCATION_DESC", "PERP_RACE", "VIC_RACE"]:
+                    bar_canvas.rotate_ticks()
 
             plt.tight_layout()
             if self.tool_bar is not None:
@@ -261,6 +316,7 @@ class ControlCenter(MainInterface):
                 if permission == QMessageBox.Discard:
                     self.yaxis_comboBox.setCurrentIndex(self.previous_yaxis_index)
                     return
+
             data = self.data[column].value_counts(ascending=True)
             # if the column data have intrinsic order, sort by that order
             # rather than the default count order
@@ -271,9 +327,7 @@ class ControlCenter(MainInterface):
                 # if the column feature is the datetime feature plot the chart
                 # as specified by the time frequency chosen by the user
                 if self.yaxis_daily_setting.isChecked():
-                    tick_labels = [
-                        "Mon", "Tue", "Wed", "Thurs", "Fri", "Sat", "Sun"
-                    ]
+                    tick_labels = ["Mon", "Tue", "Wed", "Thurs", "Fri", "Sat", "Sun"]
                     data = self.data.index.isocalendar().day.value_counts().sort_index(ascending=True)
                 elif self.yaxis_monthly_setting.isChecked():
                     tick_labels = [
@@ -287,8 +341,49 @@ class ControlCenter(MainInterface):
             index, values = data.index, data.values
 
             bar_canvas = CreateCanvas()
-            bar_canvas.plot_bar_chart("Horizontal", index, values, axis_label=column,
-                                      grid_on=True, grid_axis="x", tick_labels=tick_labels)
+            if self.group_by_comboBox.currentText() == "None":
+                bar_canvas.plot_bar_chart("Horizontal", index, values, axis_label=column,
+                                          grid_on=True, grid_axis="x", tick_labels=tick_labels)
+            else:
+                hue = None
+                if self.group_by_comboBox.currentText() not in self.categorical_columns:
+                    # Warn the user
+                    message = "Grouping numerical features uses too much computer resources. " \
+                              "Aborting"
+                    QMessageBox().warning(self, "Invalid data", message)
+
+                    # plot the chart without grouping the data
+                    bar_canvas.plot_bar_chart("Horizontal", index, values, axis_label=column,
+                                              grid_on=True, grid_axis="x", tick_labels=tick_labels)
+                elif self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
+                    if self.group_by_daily_setting.isChecked():
+                        hue = self.data.index.isocalendar().day
+                    elif self.group_by_monthly_setting.isChecked():
+                        hue = self.data.index.month
+                    elif self.group_by_yearly_setting.isChecked():
+                        hue = self.data.index.year
+
+                    # convert hue data to pd.Series having the same index with the
+                    # main data to enable plotting as hue
+                    hue = pd.Series(hue, index=self.data.index)
+                else:
+                    hue = self.group_by_comboBox.currentText()
+
+                if hue is None:
+                    bar_canvas.plot_bar_chart("Horizontal", index, values, axis_label=column,
+                                              grid_on=True, grid_axis="x", tick_labels=tick_labels)
+                else:
+                    if column == "OCCUR_DATE_OCCUR_TIME":
+                        if self.yaxis_daily_setting.isChecked():
+                            column = self.data.index.isocalendar().day
+                        elif self.yaxis_monthly_setting.isChecked():
+                            column = self.data.index.month
+                        elif self.yaxis_yearly_setting.isChecked():
+                            column = self.data.index.year
+
+                        column = pd.Series(column, index=self.data.index)
+
+                    sns.countplot(y=column, hue=hue, data=self.data, ax=bar_canvas.axes)
 
             if self.tool_bar is not None:
                 self.removeToolBar(self.tool_bar)
@@ -350,6 +445,8 @@ class ControlCenter(MainInterface):
                     xaxis = self.data.index.month
                     x_label = "Month"
 
+                xaxis = pd.Series(xaxis, index=self.data.index)
+
             if yaxis.name == "OCCUR_DATE_OCCUR_TIME":
 
                 if self.yaxis_daily_setting.isChecked():
@@ -362,15 +459,52 @@ class ControlCenter(MainInterface):
                     yaxis = self.data.index.month
                     y_label = "Month"
 
+                yaxis = pd.Series(yaxis, self.data.index)
+
             alpha = self.set_scatter_transparency.value() / 10
             self.set_scatter_transparency.setToolTip(f"{alpha}")
 
             scatter_canvas = CreateCanvas()
-            scatter_canvas.plot_scatter_chart(xaxis, yaxis, x_label=x_label, y_label=y_label,
-                                              x_tick_labels=x_tick_labels,
-                                              y_tick_labels=y_tick_labels,
-                                              fill=self.shade_plot.isChecked(),
-                                              alpha=alpha)
+
+            if self.group_by_comboBox.currentText() == "None":
+                scatter_canvas.plot_scatter_chart(xaxis, yaxis, x_label=x_label, y_label=y_label,
+                                                  x_tick_labels=x_tick_labels,
+                                                  y_tick_labels=y_tick_labels,
+                                                  fill=self.shade_plot.isChecked(),
+                                                  alpha=alpha, data=self.data)
+            else:
+                hue = None
+                if self.group_by_comboBox.currentText() not in self.categorical_columns:
+                    # warn the user
+                    message = "Grouping numerical features uses too much computer resources. " \
+                              "Aborting..."
+                    QMessageBox().warning(self, "Invalid data", message)
+
+                    # plot the chart without grouping the data
+                    scatter_canvas.plot_scatter_chart(xaxis, yaxis, x_label=x_label, y_label=y_label,
+                                                      x_tick_labels=x_tick_labels,
+                                                      y_tick_labels=y_tick_labels,
+                                                      fill=self.shade_plot.isChecked(),
+                                                      alpha=alpha)
+                elif self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
+                    if self.group_by_daily_setting.isChecked():
+                        hue = self.data.index.isocalendar().day
+                    elif self.group_by_monthly_setting.isChecked():
+                        hue = self.data.index.month
+                    elif self.group_by_yearly_setting.isChecked():
+                        hue = self.data.index.year
+
+                    # convert hue data to pd.Series having the same index with the
+                    # main data to enable plotting as hue
+                    hue = pd.Series(hue, index=self.data.index)
+                else:
+                    hue = self.group_by_comboBox.currentText()
+
+                scatter_canvas.plot_scatter_chart(xaxis, yaxis, x_label=x_label, y_label=y_label,
+                                                  x_tick_labels=x_tick_labels,
+                                                  y_tick_labels=y_tick_labels,
+                                                  fill=self.shade_plot.isChecked(),
+                                                  alpha=alpha, hue=hue, data=self.data)
 
             if self.tool_bar is not None:
                 self.removeToolBar(self.tool_bar)
@@ -518,6 +652,12 @@ class ControlCenter(MainInterface):
 
             density_canvas = CreateCanvas()
 
+            if axis == "group_by":
+                if xaxis != "None":
+                    axis = "x"
+                elif yaxis != None:
+                    axis = "y"
+
             if xaxis in self.numerical_columns and yaxis in self.numerical_columns:
                 # if both axis contains valid data
                 xaxis = self.data[xaxis]
@@ -537,6 +677,8 @@ class ControlCenter(MainInterface):
                         xaxis = self.data.index.month
                         x_label = "Month"
 
+                    xaxis = pd.Series(xaxis, index=self.data.index)
+
                 if yaxis.name == "OCCUR_DATE_OCCUR_TIME":
 
                     if self.yaxis_daily_setting.isChecked():
@@ -548,10 +690,36 @@ class ControlCenter(MainInterface):
                         yaxis = self.data.index.month
                         y_label = "Month"
 
+                    yaxis = pd.Series(yaxis, index=self.data.index)
+
                 if x_label == y_label:
                     sns.histplot(x=xaxis, y=yaxis, ax=density_canvas.axes)
                 else:
-                    sns.kdeplot(x=xaxis, y=yaxis, fill=True, ax=density_canvas.axes)
+                    if self.group_by_comboBox.currentText() == "None":
+                        sns.kdeplot(x=xaxis, y=yaxis, fill=True, ax=density_canvas.axes)
+                    else:
+                        hue = None
+                        if self.group_by_comboBox.currentText() not in self.categorical_columns:
+                            message = "Grouping numerical features uses too much computer resources. Aborting..."
+                            QMessageBox().warning(self, "Invalid data", message)
+
+                            return
+                        else:
+                            if self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
+                                if self.group_by_daily_setting.isChecked():
+                                    hue = self.data.index.isocalendar().day
+                                elif self.group_by_monthly_setting.isChecked():
+                                    hue = self.data.index.month
+                                elif self.group_by_yearly_setting.isChecked():
+                                    hue = self.data.index.year
+
+                                hue = pd.Series(hue, index=self.data.index)
+                            else:
+                                hue = self.group_by_comboBox.currentText()
+
+                            sns.kdeplot(x=xaxis, y=yaxis, fill=True, hue=hue, data=self.data,
+                                        ax=density_canvas.axes)
+
                 density_canvas.axes.set_xlabel(x_label)
                 density_canvas.axes.set_ylabel(y_label)
 
@@ -566,19 +734,72 @@ class ControlCenter(MainInterface):
                     elif self.xaxis_monthly_setting.isChecked():
                         xaxis = self.data.index.month
 
-                sns.kdeplot(x=xaxis, fill=True, ax=density_canvas.axes)
+                    xaxis = pd.Series(xaxis, index=self.data.index)
+
+                if self.group_by_comboBox.currentText() == "None":
+                    sns.kdeplot(x=xaxis, fill=True, ax=density_canvas.axes)
+                else:
+                    hue = None
+                    if self.group_by_comboBox.currentText() not in self.categorical_columns:
+                        message = "Grouping numerical features uses too much computer " \
+                                  "resouces. Aborting..."
+                        QMessageBox().warning(self, "Invalid data", message)
+
+                        return
+                    else:
+                        if self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
+                            if self.group_by_daily_setting.isChecked():
+                                hue = self.data.index.isocalendar().day
+                            elif self.group_by_monthly_setting.isChecked():
+                                hue = self.data.index.month
+                            elif self.group_by_yearly_setting.isChecked():
+                                hue = self.data.index.year
+
+                            hue = pd.Series(hue, index=self.data.index)
+                        else:
+                            hue = self.group_by_comboBox.currentText()
+
+                        sns.kdeplot(x=xaxis, fill=True, hue=hue, data=self.data, ax=density_canvas.axes)
+
                 density_canvas.axes.set_xlabel(x_label)
 
             elif axis == "y" and yaxis in self.numerical_columns:
                 yaxis = self.data[yaxis]
                 y_label = yaxis.name
+
                 if yaxis.name == "OCCUR_DATE_OCCUR_TIME":
                     if self.yaxis_daily_setting.isChecked():
                         yaxis = list(self.data.index.isocalendar().day)
                     elif self.yaxis_monthly_setting.isChecked():
                         yaxis = self.data.index.month
 
-                sns.kdeplot(y=yaxis, fill=True, ax=density_canvas.axes)
+                    yaxis = pd.Series(yaxis, index=self.data.index)
+
+                if self.group_by_comboBox.currentText() == "None":
+                    sns.kdeplot(y=yaxis, fill=True, ax=density_canvas.axes)
+                else:
+                    hue = None
+                    if self.group_by_comboBox.cuhbrrentText() not in self.categorical_columns:
+                        message = "Grouping numerical features uses too much computer resources. " \
+                                  "Aborting..."
+                        QMessageBox().warning(self, "Invalid data", message)
+
+                        return
+                    else:
+                        if self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
+                            if self.group_by_daily_setting.isChecked():
+                                hue = self.data.index.isocalendar().day
+                            elif self.group_by_monthly_setting.isChecked():
+                                hue = self.data.index.month
+                            elif self.group_by_yearly_setting.isChecked():
+                                hue = self.data.index.year
+
+                            hue = pd.Series(hue, index=self.data.index)
+                        else:
+                            hue = self.group_by_comboBox.currentText()
+
+                        sns.kdeplot(y=yaxis, fill=True, hue=hue, data=self.data,
+                                    ax=density_canvas.axes)
                 density_canvas.axes.set_ylabel(y_label)
 
             if self.tool_bar is not None:
@@ -591,7 +812,7 @@ class ControlCenter(MainInterface):
         """Plot the data as specified by the plot type using the appropriate plotting
         sub functions."""
         plot_type = self.plot_type_comboBox.currentText()
-        self.setCursor(change_cursor())
+        self.setCursor(self.utility.change_cursor("on"))
 
         if plot_type == "Bar plot":
             if self.xaxis_comboBox.isEnabled():
@@ -603,12 +824,15 @@ class ControlCenter(MainInterface):
             self.plot_scatter_chart(axis)
 
         elif plot_type == "Line plot":
-            self.plot_line_chart(axis)
+            if axis != "group_by":
+                self.plot_line_chart(axis)
 
         elif plot_type == "Density plot":
+            if axis is None:
+                axis = "group_by"
             self.plot_density_chart(axis)
 
-        self.setCursor(change_cursor("off"))
+        self.setCursor(self.utility.change_cursor("off"))
 
 
 if __name__ == '__main__':

@@ -3,16 +3,13 @@ import sys
 from PyQt5.QtWidgets import (
         QVBoxLayout, QFormLayout, QComboBox, QCheckBox, QSpacerItem, QGroupBox,
         QMainWindow, QSizePolicy, QLineEdit, QApplication, QWidget, QDockWidget,
-        QRadioButton, QHBoxLayout, QMessageBox, QStatusBar, QDoubleSpinBox,
-        QSlider, QScrollArea
+        QRadioButton, QHBoxLayout, QMessageBox, QSlider, QScrollArea
 )
 
-from PyQt5.QtCore import Qt, QDateTime, QDate, QSize
-from PyQt5.QtGui import QPainter, QFont, QColor, QBrush
+from PyQt5.QtCore import Qt, QDateTime, QDate
+from PyQt5.QtGui import QPainter, QFont, QColor
 from PyQt5.QtChart import (
-    QChart, QChartView, QScatterSeries, QAreaSeries, QBarSet, QBarSeries, QDateTimeAxis,
-    QCategoryAxis, QBarCategoryAxis, QLegend, QLineSeries, QPieSeries, QBoxPlotSeries,
-    QHorizontalBarSeries, QValueAxis
+    QChart, QChartView, QDateTimeAxis, QCategoryAxis, QBarCategoryAxis, QLineSeries, QValueAxis
 )
 
 import matplotlib as mpl
@@ -124,6 +121,22 @@ class MainInterface(QMainWindow):
 
         self.yaxis_date_settings_group.setLayout(v_box_layout)
 
+        self.group_by_date_settings_group = QGroupBox("Date Settings")
+        self.group_by_date_settings_group.setHidden(True)
+
+        self.group_by_daily_setting = QRadioButton("Daily")
+        self.group_by_monthly_setting = QRadioButton("Monthly")
+        self.group_by_yearly_setting = QRadioButton("Yearly")
+
+        self.group_by_yearly_setting.setChecked(True)
+
+        v_box_layout = QVBoxLayout()
+        v_box_layout.addWidget(self.group_by_daily_setting)
+        v_box_layout.addWidget(self.group_by_monthly_setting)
+        v_box_layout.addWidget(self.group_by_yearly_setting)
+
+        self.group_by_date_settings_group.setLayout(v_box_layout)
+
         form_layout = QFormLayout()
         form_layout.addRow("Plot type:", self.plot_type_comboBox)
         form_layout.addWidget(self.radio_group)
@@ -133,6 +146,7 @@ class MainInterface(QMainWindow):
         form_layout.addRow("Y axis:", self.yaxis_comboBox)
         form_layout.addWidget(self.yaxis_date_settings_group)
         form_layout.addRow("Group by:", self.group_by_comboBox)
+        form_layout.addWidget(self.group_by_date_settings_group)
 
         form_layout.setVerticalSpacing(18)
         plot_setting_groupBox.setLayout(form_layout)

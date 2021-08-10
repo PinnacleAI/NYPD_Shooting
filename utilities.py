@@ -55,16 +55,19 @@ class CreateCanvas(FigureCanvasQTAgg):
             self.axes.grid(grid_on, axis=grid_axis)
 
     def plot_scatter_chart(self, xaxis: List[int], yaxis: List[int], x_label: str,
-                           y_label: str, x_tick_labels: bool = False,
-                           y_tick_labels: bool = False, fill: bool = False, alpha=1.0):
+                           y_label: str, x_tick_labels: bool = False, y_tick_labels: bool = False,
+                           fill: bool = False, alpha=1.0, hue=None, data: pd.DataFrame = None):
         tick_labels = ["0", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun", "8"]
         if fill:
             if x_label == y_label:
                 sns.histplot(x=xaxis, y=yaxis, ax=self.axes)
             else:
-                sns.kdeplot(x=xaxis, y=yaxis, fill=fill, ax=self.axes)
+                sns.kdeplot(x=xaxis, y=yaxis, fill=fill, hue=hue, data=data, ax=self.axes)
         else:
-            self.axes.scatter(xaxis, yaxis, alpha=alpha)
+            if hue is None:
+                self.axes.scatter(xaxis, yaxis, alpha=alpha)
+            else:
+                sns.scatterplot(x=xaxis, y=yaxis, hue=hue, data=data, alpha=alpha, ax=self.axes)
         self.axes.set_xlabel(x_label)
         self.axes.set_ylabel(y_label)
 
@@ -120,7 +123,7 @@ def _change_axis(axis_label, values, axe="x") -> QValueAxis or QBarCategoryAxis 
     return axis
 
 
-def change_cursor(status="on") -> QCursor:
+def _change_cursor(status="on") -> QCursor:
     """Change the cursor shape of the application to indicate it busy state"""
     cursor = QCursor()
     if status == "on":
@@ -170,7 +173,7 @@ class UtilityManager:
 
     @staticmethod
     def change_cursor(status) -> QCursor:
-        return change_cursor(status)
+        return _change_cursor(status)
 
     @staticmethod
     def load_dataset_from_memory() -> pd.DataFrame:
