@@ -3,11 +3,12 @@ import sys
 from PyQt5.QtWidgets import (
         QVBoxLayout, QFormLayout, QComboBox, QCheckBox, QSpacerItem, QGroupBox,
         QMainWindow, QSizePolicy, QLineEdit, QApplication, QWidget, QDockWidget,
-        QRadioButton, QHBoxLayout, QMessageBox, QSlider, QScrollArea
+        QRadioButton, QHBoxLayout, QMessageBox, QSlider, QScrollArea,
+        QSplashScreen
 )
 
 from PyQt5.QtCore import Qt, QDateTime, QDate
-from PyQt5.QtGui import QPainter, QFont, QColor
+from PyQt5.QtGui import QPainter, QFont, QColor, QPixmap, QIcon
 from PyQt5.QtChart import (
     QChart, QChartView, QDateTimeAxis, QCategoryAxis, QBarCategoryAxis, QLineSeries, QValueAxis
 )
@@ -22,28 +23,11 @@ class MainInterface(QMainWindow):
         appearance_groupBox = QGroupBox("Appearance:")
 
         self.theme_comboBox = QComboBox()
-        self.animation_comboBox = QComboBox()
-        self.legend_comboBox = QComboBox()
-        self.anti_aliasing_checkBox = QCheckBox("")
         spacer = QSpacerItem(15, 10, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.title_lineEdit = QLineEdit()
-        self.title_lineEdit.setClearButtonEnabled(True)
-
-        self.xlabel_lineEdit = QLineEdit()
-        self.xlabel_lineEdit.setClearButtonEnabled(True)
-
-        self.ylabel_lineEdit = QLineEdit()
-        self.ylabel_lineEdit.setClearButtonEnabled(True)
 
         form_layout = QFormLayout()
         form_layout.addRow("Theme:", self.theme_comboBox)
-        # form_layout.addRow("Animations:", self.animation_comboBox)
-        form_layout.addRow("Legend:", self.legend_comboBox)
-        form_layout.addRow("Anti-Aliasing:", self.anti_aliasing_checkBox)
         form_layout.addItem(spacer)
-        form_layout.addRow("Title:", self.title_lineEdit)
-        form_layout.addRow("X label:", self.xlabel_lineEdit)
-        form_layout.addRow("Y label:", self.ylabel_lineEdit)
 
         form_layout.setVerticalSpacing(18)
         appearance_groupBox.setLayout(form_layout)
@@ -221,7 +205,6 @@ class MainInterface(QMainWindow):
         self.chart_view.setRenderHint(QPainter.HighQualityAntialiasing)
         self.chart_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.setup_dockwidget_values()
         self.connect_slots()
         self.setCentralWidget(self.chart_view)
 
@@ -230,21 +213,6 @@ class MainInterface(QMainWindow):
     def connect_slots(self):
         """Connect the slots to their appropriate signals"""
         self.theme_comboBox.currentIndexChanged.connect(self.change_chart_theme)
-        self.animation_comboBox.currentTextChanged.connect(self.change_chart_animation)
-        self.legend_comboBox.currentTextChanged.connect(self.change_chart_legend)
-        self.anti_aliasing_checkBox.toggled.connect(self.toggle_antialiasing)
-
-        self.title_lineEdit.textChanged.connect(lambda: self.change_chart_label_title("title"))
-        self.xlabel_lineEdit.textChanged.connect(lambda: self.change_chart_label_title("x_label"))
-        self.ylabel_lineEdit.textChanged.connect(lambda: self.change_chart_label_title("y_label"))
-
-    def setup_dockwidget_values(self):
-        # set the values for the legend combobox
-        self.legend_dict = {
-            "No Legend": None, "Align Top": Qt.AlignTop, "Align Right": Qt.AlignRight,
-            "Align Bottom": Qt.AlignBottom, "Align Left": Qt.AlignLeft
-        }
-        self.legend_comboBox.addItems(self.legend_dict)
 
     def initialize_ui(self):
         """Initialize the window and display its contents."""

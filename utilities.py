@@ -1,3 +1,19 @@
+
+"""
+This module contains function needed to perform several action throughout the
+program.
+
+Note the functions in this module follow the purely functional paradigm. That is
+the function are strictly functional in that they do not change the state of
+application, they only receive information through their parameter, process it
+and return appropriate answers or perform appropriate actions based on that information.
+
+This programming style has greatly helps in making the code simple, readable and detecting
+bug easier. But there is only so much it can do, when not given the permission to change
+the application state
+
+"""
+
 from typing import List
 
 import pandas as pd
@@ -11,6 +27,8 @@ from PyQt5.QtCore import Qt
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+
+import resources
 
 
 class CreateCanvas(FigureCanvasQTAgg):
@@ -28,7 +46,28 @@ class CreateCanvas(FigureCanvasQTAgg):
     def plot_bar_chart(self, orientation, labels: List[str], values: List[int],
                        axis_label=None, grid_on=False, grid_axis=None,
                        tick_labels: List[str] = None):
-        """Plots vertical bar chart on the created figure"""
+        """Plots vertical bar chart on the created figure
+
+        Parameter:
+        orientation: str (Vertical | Horizontal)
+            The axis on which to plot the bar
+        labels: list[str]
+            The categorical part of the chart made up of list of str containing
+             the name of each bar plotted on the graph
+        values: list[int]
+            The numerical part of the chart made up of list of int containing
+            the height or length of each bar plotted if orientation is vertical
+            or horizontal respectively
+        axis_label: optional
+            The name of axis been plotted on as decided by the orientation
+        grid_on: bool (default = False)
+            if True, the grid line will be displayed.
+        grid_axis: optional
+            The axis on which the grid line will be display. If None, the grid line
+            will be displayed on both axis
+
+            see matplotlib documentation for more control
+        """
         labels = [f"{ind}" for ind in labels]
 
         if orientation == "Vertical":
@@ -57,6 +96,19 @@ class CreateCanvas(FigureCanvasQTAgg):
     def plot_scatter_chart(self, xaxis: List[int], yaxis: List[int], x_label: str,
                            y_label: str, x_tick_labels: bool = False, y_tick_labels: bool = False,
                            fill: bool = False, alpha=1.0, hue=None, data: pd.DataFrame = None):
+        """Plot a scatter chart on the created figure
+
+        Parameter:
+        xaxis, yaxis: list[int]
+            The values to plot on the x and y axis respectively
+
+        x_labels, y_labels: str
+            The title to used in both x and y axis
+        x_tick_labels, y_tick_labels: bool
+            if True, the default label would be used in place of the default tick label
+
+            see matplotlib documentation for more control
+        """
         tick_labels = ["0", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun", "8"]
         if fill:
             if x_label == y_label:
@@ -77,14 +129,13 @@ class CreateCanvas(FigureCanvasQTAgg):
             self.axes.set_yticklabels(tick_labels)
 
     def rotate_ticks(self):
+        """Rotate the labels of the x axis by 90 deg"""
         labels = self.axes.get_xticklabels()
         plt.setp(labels, rotation=90)
 
-    def plot_charts(self):
-        raise NotImplementedError
-
 
 def reorder_series(axis_label, series):
+    """Set the order of the features that has intrinsic ordering"""
     if axis_label == 'JURISDICTION' or axis_label == "PERP_AGE_GROUP" or axis_label == "VIC_AGE_GROUP":
         ordered = series.cat.as_ordered()
         return ordered
@@ -167,6 +218,8 @@ def _display_bar_chart_warning(parent) -> bool:
 
 
 class UtilityManager:
+    """A factory class, who purpose is to group the utility function in a simple namespace
+    for easier access"""
     @staticmethod
     def change_axis(axis_label, values, axe) -> QValueAxis or QBarCategoryAxis or QDateTimeAxis:
         return _change_axis(axis_label, values, axe)

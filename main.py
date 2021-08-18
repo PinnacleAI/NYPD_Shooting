@@ -7,6 +7,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
 from main_interface import *
 from utilities import UtilityManager, CreateCanvas
+import resources
 
 
 class ControlCenter(MainInterface):
@@ -256,16 +257,7 @@ class ControlCenter(MainInterface):
                     bar_canvas.plot_bar_chart("Vertical", index, values, axis_label=column,
                                               grid_on=True, grid_axis="y", tick_labels=tick_labels)
                 elif self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
-                    if self.group_by_daily_setting.isChecked():
-                        hue = self.data.index.isocalendar().day
-                    elif self.group_by_monthly_setting.isChecked():
-                        hue = self.data.index.month
-                    elif self.group_by_yearly_setting.isChecked():
-                        hue = self.data.index.year
-
-                    # convert hue data to pd.Series having the same index with the
-                    # main data to enable plotting as hue
-                    hue = pd.Series(hue, index=self.data.index)
+                    hue = self.date_setting_checker("group_by")
                 else:
                     hue = self.group_by_comboBox.currentText()
 
@@ -274,14 +266,7 @@ class ControlCenter(MainInterface):
                                               grid_on=True, grid_axis="y", tick_labels=tick_labels)
                 else:
                     if column == "OCCUR_DATE_OCCUR_TIME":
-                        if self.xaxis_daily_setting.isChecked():
-                            column = self.data.index.isocalendar().day
-                        elif self.xaxis_monthly_setting.isChecked():
-                            column = self.data.index.month
-                        elif self.xaxis_yearly_setting.isChecked():
-                            column = self.data.index.year
-
-                        column = pd.Series(column, index=self.data.index)
+                        column = self.date_setting_checker("xaxis")
 
                     sns.countplot(x=column, hue=hue, data=self.data, ax=bar_canvas.axes)
 
@@ -356,16 +341,7 @@ class ControlCenter(MainInterface):
                     bar_canvas.plot_bar_chart("Horizontal", index, values, axis_label=column,
                                               grid_on=True, grid_axis="x", tick_labels=tick_labels)
                 elif self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
-                    if self.group_by_daily_setting.isChecked():
-                        hue = self.data.index.isocalendar().day
-                    elif self.group_by_monthly_setting.isChecked():
-                        hue = self.data.index.month
-                    elif self.group_by_yearly_setting.isChecked():
-                        hue = self.data.index.year
-
-                    # convert hue data to pd.Series having the same index with the
-                    # main data to enable plotting as hue
-                    hue = pd.Series(hue, index=self.data.index)
+                    hue = self.date_setting_checker("group_by")
                 else:
                     hue = self.group_by_comboBox.currentText()
 
@@ -374,14 +350,7 @@ class ControlCenter(MainInterface):
                                               grid_on=True, grid_axis="x", tick_labels=tick_labels)
                 else:
                     if column == "OCCUR_DATE_OCCUR_TIME":
-                        if self.yaxis_daily_setting.isChecked():
-                            column = self.data.index.isocalendar().day
-                        elif self.yaxis_monthly_setting.isChecked():
-                            column = self.data.index.month
-                        elif self.yaxis_yearly_setting.isChecked():
-                            column = self.data.index.year
-
-                        column = pd.Series(column, index=self.data.index)
+                        column = self.date_setting_checker("yaxis")
 
                     sns.countplot(y=column, hue=hue, data=self.data, ax=bar_canvas.axes)
 
@@ -487,16 +456,7 @@ class ControlCenter(MainInterface):
                                                       fill=self.shade_plot.isChecked(),
                                                       alpha=alpha)
                 elif self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
-                    if self.group_by_daily_setting.isChecked():
-                        hue = self.data.index.isocalendar().day
-                    elif self.group_by_monthly_setting.isChecked():
-                        hue = self.data.index.month
-                    elif self.group_by_yearly_setting.isChecked():
-                        hue = self.data.index.year
-
-                    # convert hue data to pd.Series having the same index with the
-                    # main data to enable plotting as hue
-                    hue = pd.Series(hue, index=self.data.index)
+                    hue = self.date_setting_checker("group_by")
                 else:
                     hue = self.group_by_comboBox.currentText()
 
@@ -706,14 +666,7 @@ class ControlCenter(MainInterface):
                             return
                         else:
                             if self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
-                                if self.group_by_daily_setting.isChecked():
-                                    hue = self.data.index.isocalendar().day
-                                elif self.group_by_monthly_setting.isChecked():
-                                    hue = self.data.index.month
-                                elif self.group_by_yearly_setting.isChecked():
-                                    hue = self.data.index.year
-
-                                hue = pd.Series(hue, index=self.data.index)
+                                hue = self.date_setting_checker("group_by")
                             else:
                                 hue = self.group_by_comboBox.currentText()
 
@@ -748,14 +701,7 @@ class ControlCenter(MainInterface):
                         return
                     else:
                         if self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
-                            if self.group_by_daily_setting.isChecked():
-                                hue = self.data.index.isocalendar().day
-                            elif self.group_by_monthly_setting.isChecked():
-                                hue = self.data.index.month
-                            elif self.group_by_yearly_setting.isChecked():
-                                hue = self.data.index.year
-
-                            hue = pd.Series(hue, index=self.data.index)
+                            hue = self.date_setting_checker("group_by")
                         else:
                             hue = self.group_by_comboBox.currentText()
 
@@ -787,14 +733,8 @@ class ControlCenter(MainInterface):
                         return
                     else:
                         if self.group_by_comboBox.currentText() == "OCCUR_DATE_OCCUR_TIME":
-                            if self.group_by_daily_setting.isChecked():
-                                hue = self.data.index.isocalendar().day
-                            elif self.group_by_monthly_setting.isChecked():
-                                hue = self.data.index.month
-                            elif self.group_by_yearly_setting.isChecked():
-                                hue = self.data.index.year
 
-                            hue = pd.Series(hue, index=self.data.index)
+                            hue = self.date_setting_checker("group_by")
                         else:
                             hue = self.group_by_comboBox.currentText()
 
@@ -834,9 +774,48 @@ class ControlCenter(MainInterface):
 
         self.setCursor(self.utility.change_cursor("off"))
 
+    def date_setting_checker(self, options: str) -> pd.Series:
+        """A validation function for the date option radio buttons."""
+        value = None
+        if options == "group_by":
+            if self.group_by_daily_setting.isChecked():
+                value = self.data.index.isocalendar().day
+            elif self.group_by_monthly_setting.isChecked():
+                value = self.data.index.month
+            elif self.group_by_yearly_setting.isChecked():
+                value = self.data.index.year
+        elif options == "xaxis":
+            if self.xaxis_daily_setting.isChecked():
+                value = self.data.index.isocalendar().day
+            elif self.xaxis_monthly_setting.isChecked():
+                value = self.data.index.month
+            elif self.xaxis_yearly_setting.isChecked():
+                value = self.data.index.year
+        elif options == "yaxis":
+            if self.yaxis_daily_setting.isChecked():
+                value = self.data.index.isocalendar().day
+            elif self.yaxis_monthly_setting.isChecked():
+                value = self.data.index.month
+            elif self.yaxis_yearly_setting.isChecked():
+                value = self.data.index.year
+
+        # convert value data to pd.Series having the same index with the
+        # main data to enable plotting as value
+        value = pd.Series(value, index=self.data.index)
+
+        return value
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(":/icon"))
+    pixmap = QPixmap(":/splash_image")
+    splash_screen = QSplashScreen(pixmap)
+    splash_screen.show()
+
+    import time
+    time.sleep(5)
     window = ControlCenter()
+    splash_screen.finish(window)
     window.show()
     sys.exit(app.exec_())
