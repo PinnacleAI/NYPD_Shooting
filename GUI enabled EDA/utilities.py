@@ -185,7 +185,7 @@ def _change_cursor(status="on") -> QCursor:
 
 
 def _load_dataset_from_memory() -> pd.DataFrame:
-    data = pd.read_csv("NYPD_Shooting.csv", parse_dates=[["OCCUR_DATE", "OCCUR_TIME"]])
+    data = pd.read_csv("../Dataset/NYPD_Shooting.csv", parse_dates=[["OCCUR_DATE", "OCCUR_TIME"]])
 
     # optimizing tables and remove redundant columns
     data = data.drop(["Lon_Lat", "X_COORD_CD", "Y_COORD_CD", "INCIDENT_KEY"], axis=1)
