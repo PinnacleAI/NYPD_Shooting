@@ -52,6 +52,14 @@
             The Desktop GUI was developed using <span style="font-weight: bold; font-style: italic;">PyQt5</span>, 
             <span style="font-weight: bold; font-style: italic;">matplotlib</span> and <span style="font-weight: bold; font-style: italic;">seaborn</span>
         </ul>
+        <h3>How to run the GUI application</h3>
+        <div>
+            <ol>
+                <li>Download the repository</li>
+                <li>Navigate to the GUI enabled EDA folder</li>
+                <li>Run the main.py file</li>
+            </ol>
+        </div>
         <h3>Plot Samples</h3><br/>
         <div>
             <p><b>Default display</b></p>
